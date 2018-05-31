@@ -10,7 +10,7 @@ import textwrap
 import signal
 from copy import deepcopy
 from twisted.web import server
-from twisted.internet import defer, error, reactor
+from twisted.internet import defer, reactor
 from twisted.internet.task import LoopingCall
 from twisted.python.failure import Failure
 
