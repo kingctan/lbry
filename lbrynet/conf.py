@@ -290,6 +290,7 @@ ADJUSTABLE_SETTINGS = {
     'sd_download_timeout': (int, 3),
     'share_usage_data': (bool, True),  # whether to share usage stats and diagnostic info with LBRY
     'peer_search_timeout': (int, 3),
+    'blob_server_domains': (list, ['blobs.lbry.io']),  # blob HTTP mirrors for fallback
     'use_auth_http': (bool, False),
     'use_upnp': (bool, True),
     'use_keyring': (bool, False),
