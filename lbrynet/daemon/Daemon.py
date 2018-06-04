@@ -797,19 +797,6 @@ class Daemon(AuthJSONRPCServer):
             }
         defer.returnValue(response)
 
-    def jsonrpc_blah(self):
-        """
-        Usage:
-            blah
-
-        Options:
-            None
-
-        Returns:
-            blah bla
-        """
-        return self._render_response(self.component_manager.all_components_running("database", "dht", "wallet"))#""fileManager", "hashAnnouncer", "peerProtocolServer", "reflector", "session", "streamIdentifier", "wallet"))
-
     def jsonrpc_version(self):
         """
         Get lbry version information
