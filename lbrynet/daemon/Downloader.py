@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 class GetStream(object):
     def __init__(self, sd_identifier, session, exchange_rate_manager,
-                 max_key_fee, disable_max_key_fee, data_rate=None, timeout=None):
+                 max_key_fee, disable_max_key_fee, data_rate=None, timeout=None, mirror=None):
 
         self.timeout = timeout or conf.settings['download_timeout']
         self.data_rate = data_rate or conf.settings['data_rate']
@@ -53,6 +53,7 @@ class GetStream(object):
         self.finished_deferred = None
         # fired after the metadata and the first data blob have been downloaded
         self.data_downloading_deferred = defer.Deferred(None)
+        self.mirror = mirror
 
     @property
     def download_path(self):
@@ -84,6 +85,8 @@ class GetStream(object):
             d.addCallback(self._check_status)
         else:
             log.debug("Waiting for stream descriptor (%i seconds)", self.timeout_counter)
+            if self.mirror:
+                self.mirror.get_blob(self.sd_hash)
 
     def convert_max_fee(self):
         currency, amount = self.max_key_fee['currency'], self.max_key_fee['amount']

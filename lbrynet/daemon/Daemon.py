@@ -14,6 +14,7 @@ from twisted.internet import defer, threads, error, reactor
 from twisted.internet.task import LoopingCall
 from twisted.python.failure import Failure
 
+from lbrynet.core.BlobMirror import BlobMirror
 from lbryschema.claim import ClaimDict
 from lbryschema.uri import parse_lbry_uri
 from lbryschema.error import URIParseError, DecodeError
@@ -684,7 +685,8 @@ class Daemon(AuthJSONRPCServer):
             self.streams[sd_hash] = GetStream(self.sd_identifier, self.session,
                                               self.exchange_rate_manager, self.max_key_fee,
                                               self.disable_max_key_fee,
-                                              conf.settings['data_rate'], timeout)
+                                              conf.settings['data_rate'], timeout,
+                                              mirror=BlobMirror(self.session.blob_manager))
             try:
                 lbry_file, finished_deferred = yield self.streams[sd_hash].start(
                     claim_dict, name, txid, nout, file_name

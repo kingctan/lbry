@@ -7,6 +7,7 @@ from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionAborted
 from zope.interface import implements
 
+from lbrynet.core.BlobMirror import BlobMirror
 from lbrynet.core.Error import ConnectionClosedBeforeResponseError
 from lbrynet.core.Error import InvalidResponseError, RequestCanceledError, NoResponseError
 from lbrynet.core.Error import PriceDisagreementError, DownloadCanceledError, InsufficientFundsError
@@ -57,6 +58,7 @@ class BlobRequester(object):
         self._protocol_tries = {}
         self._maxed_out_peers = []
         self._incompatible_peers = []
+        self.mirror = BlobMirror(blob_manager)
 
     ######## IRequestCreator #########
     def send_next_request(self, peer, protocol):
@@ -142,6 +144,8 @@ class BlobRequester(object):
             without_bad_peers = [p for p in peers if not p in bad_peers]
             without_maxed_out_peers = [
                 p for p in without_bad_peers if p not in self._maxed_out_peers]
+            if not without_bad_peers:
+                self.mirror.get_blob(h)
             return without_maxed_out_peers
 
         d.addCallback(choose_best_peers)
