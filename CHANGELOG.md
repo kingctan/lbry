@@ -58,6 +58,7 @@ at anytime.
   * predictable result sorting for `claim_list` and `claim_list_mine`
 
 ### Added
+  * ability to disble DHT by setting `known_dht_nodes` to an empty list
   * virtual kademlia network and mock udp transport for dht integration tests
   * integration tests for bootstrapping the dht
   * configurable `concurrent_announcers` and `s3_headers_depth` settings
