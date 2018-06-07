@@ -1,3 +1,4 @@
+# coding=utf-8
 import binascii
 import logging.handlers
 import mimetypes
@@ -200,7 +201,7 @@ class Daemon(AuthJSONRPCServer):
         self.session = self.component_manager.get_component("session")
         self.wallet = self.component_manager.get_component("wallet")
         self.dht_node = self.component_manager.get_component("dht")
-        yield self._check_wallet_locked()
+        # yield self._check_wallet_locked()
         yield self._start_analytics()
         self.sd_identifier = self.component_manager.get_component("streamIdentifier")
         self.file_manager = self.component_manager.get_component("fileManager")
@@ -286,7 +287,7 @@ class Daemon(AuthJSONRPCServer):
     def _check_wallet_locked(self):
         wallet = self.wallet
         # if wallet.wallet.use_encryption: STARTUP Stage was set earlier, figure out what to do now
-        yield wallet.check_locked()
+        yield wallet.check_locked
 
     def _download_blob(self, blob_hash, rate_manager=None, timeout=None):
         """
@@ -1005,8 +1006,8 @@ class Daemon(AuthJSONRPCServer):
             return self._render_response(float(
                 self.wallet.get_address_balance(address, include_unconfirmed)))
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_wallet_unlock(self, password):
         """
         Unlock an encrypted wallet
@@ -1021,8 +1022,9 @@ class Daemon(AuthJSONRPCServer):
             (bool) true if wallet is unlocked, otherwise false
         """
 
-        cmd_runner = self.wallet.get_cmd_runner()
-        if cmd_runner.locked:
+        # the check_locked() in the if statement is needed because that is what sets
+        # the wallet_unlocked_d deferred ¯\_(ツ)_/¯
+        if not self.wallet.check_locked:
             d = self.wallet.wallet_unlocked_d
             d.callback(password)
             result = yield d
@@ -1031,8 +1033,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_wallet_decrypt(self):
         """
         Decrypt an encrypted wallet, this will remove the wallet password
@@ -1051,8 +1053,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_wallet_encrypt(self, new_password):
         """
         Encrypt a wallet with a password, if the wallet is already encrypted this will update
@@ -1092,8 +1094,8 @@ class Daemon(AuthJSONRPCServer):
         reactor.callLater(0.1, reactor.fireSystemEvent, "shutdown")
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("fileManager")
+    @defer.inlineCallbacks
     def jsonrpc_file_list(self, **kwargs):
         """
         List files limited by optional filters
@@ -1158,8 +1160,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_resolve_name(self, name, force=False):
         """
         Resolve stream info from a LBRY name
@@ -1184,8 +1186,8 @@ class Daemon(AuthJSONRPCServer):
         else:
             defer.returnValue(metadata)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_claim_show(self, txid=None, nout=None, claim_id=None):
         """
         Resolve claim info from txid/nout or with claim ID
@@ -1230,8 +1232,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(claim_results)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_resolve(self, force=False, uri=None, uris=[]):
         """
         Resolve given LBRY URIs
@@ -1321,8 +1323,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(results)
         defer.returnValue(response)
 
+    @AuthJSONRPCServer.requires("wallet", "fileManager", "session", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet", "fileManager", "session")
     def jsonrpc_get(self, uri, file_name=None, timeout=None):
         """
         Download stream from a LBRY name.
@@ -1410,8 +1412,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("fileManager")
+    @defer.inlineCallbacks
     def jsonrpc_file_set_status(self, status, **kwargs):
         """
         Start or stop downloading a file
@@ -1451,8 +1453,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(msg)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("fileManager")
+    @defer.inlineCallbacks
     def jsonrpc_file_delete(self, delete_from_download_dir=False, delete_all=False, **kwargs):
         """
         Delete a LBRY file
@@ -1512,8 +1514,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
+    @AuthJSONRPCServer.requires("wallet", "session", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_stream_cost_estimate(self, uri, size=None):
         """
         Get estimated cost for a lbry stream
@@ -1533,8 +1535,8 @@ class Daemon(AuthJSONRPCServer):
         cost = yield self.get_est_cost(uri, size)
         defer.returnValue(cost)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_channel_new(self, channel_name, amount):
         """
         Generate a publisher key and create a new '@' prefixed certificate claim
@@ -1588,8 +1590,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_channel_list(self):
         """
         Get certificate claim infos for channels that can be published to
@@ -1609,8 +1611,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
-    @AuthJSONRPCServer.deprecated("channel_list")
     @AuthJSONRPCServer.requires("wallet")
+    @AuthJSONRPCServer.deprecated("channel_list")
     def jsonrpc_channel_list_mine(self):
         """
         Get certificate claim infos for channels that can be published to (deprecated)
@@ -1627,8 +1629,8 @@ class Daemon(AuthJSONRPCServer):
 
         return self.jsonrpc_channel_list()
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_channel_export(self, claim_id):
         """
         Export serialized channel signing information for a given certificate claim id
@@ -1646,8 +1648,8 @@ class Daemon(AuthJSONRPCServer):
         result = yield self.wallet.export_certificate_info(claim_id)
         defer.returnValue(result)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_channel_import(self, serialized_certificate_info):
         """
         Import serialized channel signing information (to allow signing new claims to the channel)
@@ -1665,8 +1667,8 @@ class Daemon(AuthJSONRPCServer):
         result = yield self.wallet.import_certificate_info(serialized_certificate_info)
         defer.returnValue(result)
 
+    @AuthJSONRPCServer.requires("wallet", "fileManager", "session", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet", "fileManager", "session")
     def jsonrpc_publish(self, name, bid, metadata=None, file_path=None, fee=None, title=None,
                         description=None, author=None, language=None, license=None,
                         license_url=None, thumbnail=None, preview=None, nsfw=None, sources=None,
@@ -1875,8 +1877,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_claim_abandon(self, claim_id=None, txid=None, nout=None):
         """
         Abandon a name and reclaim credits from the claim
@@ -1908,8 +1910,8 @@ class Daemon(AuthJSONRPCServer):
         self.analytics_manager.send_claim_action('abandon')
         defer.returnValue(result)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_claim_new_support(self, name, claim_id, amount):
         """
         Support a name claim
@@ -1936,8 +1938,8 @@ class Daemon(AuthJSONRPCServer):
         self.analytics_manager.send_claim_action('new_support')
         defer.returnValue(result)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_claim_renew(self, outpoint=None, height=None):
         """
         Renew claim(s) or support(s)
@@ -1979,8 +1981,8 @@ class Daemon(AuthJSONRPCServer):
             result = yield self.wallet.claim_renew_all_before_expiration(height)
         defer.returnValue(result)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_claim_send_to_address(self, claim_id, address, amount=None):
         """
         Send a name claim to an address
@@ -2050,8 +2052,8 @@ class Daemon(AuthJSONRPCServer):
         d.addCallback(lambda claims: self._render_response(claims))
         return d
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_claim_list(self, name):
         """
         List current claims and information about them for a given name
@@ -2088,8 +2090,8 @@ class Daemon(AuthJSONRPCServer):
         claims = yield self.wallet.get_claims_for_name(name)
         defer.returnValue(claims)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_claim_list_by_channel(self, page=0, page_size=10, uri=None, uris=[]):
         """
         Get paginated claims in a channel specified by a channel uri
@@ -2298,8 +2300,8 @@ class Daemon(AuthJSONRPCServer):
         d.addCallback(lambda r: self._render_response(r))
         return d
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_wallet_list(self):
         """
         List wallet addresses
@@ -2367,9 +2369,9 @@ class Daemon(AuthJSONRPCServer):
         d.addCallback(lambda address: self._render_response(address))
         return d
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @AuthJSONRPCServer.deprecated("wallet_send")
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_send_amount_to_address(self, amount, address):
         """
         Queue a payment of credits to an address
@@ -2397,8 +2399,8 @@ class Daemon(AuthJSONRPCServer):
         self.analytics_manager.send_credits_sent()
         defer.returnValue(True)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_wallet_send(self, amount, address=None, claim_id=None):
         """
         Send credits. If given an address, send credits to it. If given a claim id, send a tip
@@ -2446,8 +2448,8 @@ class Daemon(AuthJSONRPCServer):
             self.analytics_manager.send_claim_action('new_support')
         defer.returnValue(result)
 
+    @AuthJSONRPCServer.requires("wallet", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet")
     def jsonrpc_wallet_prefill_addresses(self, num_addresses, amount, no_broadcast=False):
         """
         Create new addresses, each containing `amount` credits
@@ -2477,8 +2479,8 @@ class Daemon(AuthJSONRPCServer):
         tx['broadcast'] = broadcast
         defer.returnValue(tx)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("wallet")
+    @defer.inlineCallbacks
     def jsonrpc_utxo_list(self):
         """
         List unspent transaction outputs
@@ -2545,8 +2547,8 @@ class Daemon(AuthJSONRPCServer):
         d.addCallback(lambda r: self._render_response(r))
         return d
 
+    @AuthJSONRPCServer.requires("wallet", "session", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("wallet", "session")
     def jsonrpc_blob_get(self, blob_hash, timeout=None, encoding=None, payment_rate_manager=None):
         """
         Download and return a blob
@@ -2589,8 +2591,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(result)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("session")
+    @defer.inlineCallbacks
     def jsonrpc_blob_delete(self, blob_hash):
         """
         Delete a blob
@@ -2617,8 +2619,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response("Deleted %s" % blob_hash)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("dht")
+    @defer.inlineCallbacks
     def jsonrpc_peer_list(self, blob_hash, timeout=None):
         """
         Get peers for blob hash
@@ -2658,8 +2660,8 @@ class Daemon(AuthJSONRPCServer):
         ]
         defer.returnValue(results)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("database")
+    @defer.inlineCallbacks
     def jsonrpc_blob_announce(self, blob_hash=None, stream_hash=None, sd_hash=None):
         """
         Announce blobs to the DHT
@@ -2695,8 +2697,8 @@ class Daemon(AuthJSONRPCServer):
         response = yield self._render_response(True)
         defer.returnValue(response)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("fileManager")
+    @defer.inlineCallbacks
     def jsonrpc_file_reflect(self, **kwargs):
         """
         Reflect all the blobs in a file matching the filter criteria
@@ -2731,8 +2733,8 @@ class Daemon(AuthJSONRPCServer):
         results = yield reupload.reflect_file(lbry_file, reflector_server=reflector_server)
         defer.returnValue(results)
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("database", "session", "wallet")
+    @defer.inlineCallbacks
     def jsonrpc_blob_list(self, uri=None, stream_hash=None, sd_hash=None, needed=None,
                           finished=None, page_size=None, page=None):
         """
@@ -2832,8 +2834,8 @@ class Daemon(AuthJSONRPCServer):
         d.addCallback(lambda r: self._render_response(r))
         return d
 
-    @defer.inlineCallbacks
     @AuthJSONRPCServer.requires("dht")
+    @defer.inlineCallbacks
     def jsonrpc_peer_ping(self, node_id):
         """
         Find and ping a peer by node id
@@ -2941,7 +2943,8 @@ class Daemon(AuthJSONRPCServer):
         result['node_id'] = self.dht_node.node_id.encode('hex')
         return self._render_response(result)
 
-    @AuthJSONRPCServer.requires("dht", "wallet")  # the single peer downloader needs wallet access
+    # the single peer downloader needs wallet access
+    @AuthJSONRPCServer.requires("dht", "wallet", wallet=lambda wallet: wallet.check_locked)
     def jsonrpc_blob_availability(self, blob_hash, search_timeout=None, blob_timeout=None):
         """
         Get blob availability
@@ -2966,8 +2969,8 @@ class Daemon(AuthJSONRPCServer):
 
         return self._blob_availability(blob_hash, search_timeout, blob_timeout)
 
+    @AuthJSONRPCServer.requires("session", "wallet", "dht", wallet=lambda wallet: wallet.check_locked)
     @AuthJSONRPCServer.deprecated("stream_availability")
-    @AuthJSONRPCServer.requires("session", "wallet", "dht")
     def jsonrpc_get_availability(self, uri, sd_timeout=None, peer_timeout=None):
         """
         Get stream availability for lbry uri
@@ -2987,8 +2990,8 @@ class Daemon(AuthJSONRPCServer):
 
         return self.jsonrpc_stream_availability(uri, peer_timeout, sd_timeout)
 
+    @AuthJSONRPCServer.requires("session", "wallet", "dht", wallet=lambda wallet: wallet.check_locked)
     @defer.inlineCallbacks
-    @AuthJSONRPCServer.requires("session", "wallet", "dht")
     def jsonrpc_stream_availability(self, uri, search_timeout=None, blob_timeout=None):
         """
         Get stream availability for lbry uri
